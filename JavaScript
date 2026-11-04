@@ -8,10 +8,13 @@ factRecycle:"Рециклирането на 1 алуминиева кутийк
 en:{title:"City & Sea Hero",desc:"Choose your path. Clean the cities or save the sea. Play, learn, and become an eco-hero!",startBtn:"START MISSION",score:"Score:",highscore:"Highscore:",backBtn:"✖ Cancel",modeCity:"🌳 City Hero",modeSea:"🌊 Sea Hero",
 mapPark:"Varna (Park & Trees)",mapRecycle:"Burgas (Recycling)",mapDolphins:"Coast (Net Rescue)",mapVacuum:"Depths (Submarine)",mapOil:"Surface (Oil Spill)",
 titleRecycle:"Sort the Trash!",subRecycle:"Drag and drop into the matching bin (7 items).",titlePark:"Clean & Plant!",subPark:"Click smog to clear, click ground to plant 8 trees.",titleVacuum:"Clean the Floor!",subVacuum:"Collect 10 items with the submarine. Avoid jellyfish!",titleDolphins:"Save the Animals!",subDolphins:"Swipe fast over the nets to cut them free.",titleOil:"Clean the Spill!",subOil:"Scrub fast over the dark spots to reveal the reef.",
-overWin:"Mission Success!",overFa
+overWin:"Mission Success!",overFail:"Try Again!",didYouKnow:"Did you know?",toMap:"Continue",wpLocked:"🔒 Finish the previous mission to reach this stop.",
+factRecycle:"Recycling 1 aluminum can saves enough energy to listen to music for 3 hours!",factPark:"One large tree provides enough oxygen for 4 people for an entire day!",factVacuum:"If we don't stop pollution, by 2050 there will be more plastic in the ocean than fish!",factDolphins:"Sea turtles often mistake floating plastic bags for their favorite food - jellyfish.",factOil:"Coral reefs cover just 1% of the ocean floor but are home to 25% of all marine life!"}};
+ 
+let currentLang='bg';
 function setLang(l){
   currentLang=l;
-  ['bg','en'].forEach(k=>document.getElementById('lang-'+k).className='lang-btn'+(k===l?' active':''));
+  ['bg','en'].forEach(k=>document.getElementById('lang-'+k).classList.toggle('active',k===l));
   document.querySelectorAll('[data-i18n]').forEach(el=>{const t=i18n[l][el.dataset.i18n];if(t)el.innerText=t});
   if(gameActive&&currentGameType)updateGameHeaders(currentGameType);
   rebuildMap();
@@ -66,9 +69,9 @@ function updateVFX(ctx){
   if(trailPoints.length>1){ctx.beginPath();ctx.moveTo(trailPoints[0].x,trailPoints[0].y);trailPoints.forEach(p=>ctx.lineTo(p.x,p.y));ctx.strokeStyle='#38bdf8';ctx.lineWidth=8;ctx.lineCap=ctx.lineJoin='round';ctx.shadowColor='#0ea5e9';ctx.shadowBlur=15;ctx.stroke();ctx.shadowBlur=0}
 }
 function addScore(pts,x,y){
-  score+=pts;const el=document.getElementById('score');el.innerText=score;el.style.transform='scale(1.4)';setTimeout(()=>el.style.transform='scale(1)',200);
+  score+=pts;const el=document.getElementById('score');el.innerText=score;el.classList.remove('pop');void el.offsetWidth;el.classList.add('pop');
   if(score>highscore){highscore=score;localStorage.setItem('cs_hero_score_v3',highscore);document.getElementById('highscore').innerText=highscore}
-  if(x&&y){const d=document.createElement('div');d.innerText=(pts>0?'+':'')+pts+(pts>0&&combo>1?` x${combo}`:'');d.className=`combo-text ${pts>0?'pos':'neg'}`;d.style.left=x/CW*100+'%';d.style.top=y/CH*100+'%';document.getElementById('screen-game').appendChild(d);setTimeout(()=>d.remove(),1000)}
+  if(x&&y){const d=document.createElement('div');d.innerText=(pts>0?'+':'')+pts+(pts>0&&combo>1?` x${combo}`:'');d.className=`combo-text ${pts>0?'pos':'neg'}`;d.style.setProperty('--x',x/CW*100+'%');d.style.setProperty('--y',y/CH*100+'%');document.getElementById('screen-game').appendChild(d);setTimeout(()=>d.remove(),1000)}
 }
  
 // ===== Drawing =====
@@ -88,7 +91,7 @@ function drawCloud(c,x,y,s){c.save();c.translate(x,y);c.scale(s,s);c.fillStyle='
 function drawSkyline(c,o){c.fillStyle='#0f172a';[[0,60,250],[65,45,180],[115,70,300],[190,50,220]].forEach(a=>c.fillRect(a[0]+o,CH-a[2],a[1],a[2]))}
  
 // ===== Map with zoom & waypoints =====
-let leafletMap=null;const layers={};let done={};
+let done={};
 try{done=JSON.parse(localStorage.getItem('cs_hero_done_v1')||'{}')}catch(e){}
 const M=(lat,lng,id,key,color)=>({kind:'m',lat,lng,id,key,color});
 const W=(lat,lng,bg,en,fbg,fen)=>({kind:'w',lat,lng,n:{bg,en},f:{bg:fbg,en:fen}});
@@ -108,40 +111,138 @@ sea:[
  W(42.4178,27.6958,'Созопол','Sozopol','Созопол е основан като Аполония Понтика през VII в. пр. Хр.','Sozopol was founded as Apollonia Pontica in the 7th century BC.')]};
  
 function stopsReached(route){let ok=true;return route.map(s=>{const r=ok;if(s.kind==='m'&&!done[s.id])ok=false;return r})}
-function buildLayer(mode){
-  const route=ROUTES[mode],reached=stopsReached(route),g=layers[mode]||(layers[mode]=L.layerGroup());
-  g.clearLayers();
-  const pts=route.map(s=>[s.lat,s.lng]);
-  L.polyline(pts,{color:'#fff',weight:3,opacity:.5,dashArray:'8 10'}).addTo(g);
-  const last=reached.lastIndexOf(true);
-  if(last>0)L.polyline(pts.slice(0,last+1),{color:'#fde047',weight:5,opacity:.95}).addTo(g);
-  let n=0;
-  route.forEach((s,i)=>{
-    if(s.kind==='m'){
-      const icon=L.divIcon({className:'custom-leaflet-icon',iconSize:[48,48],iconAnchor:[24,24],html:`<div class="map-node ${s.color}">${done[s.id]?'<div class="done-badge">✔</div>':''}<div class="map-label">${i18n[currentLang][s.key]}</div></div>`});
-      L.marker(pts[i],{icon,zIndexOffset:500}).on('click',()=>startMiniGame(s.id)).addTo(g);
-    }else{
-      n++;
-      const icon=L.divIcon({className:'custom-leaflet-icon',iconSize:[26,26],iconAnchor:[13,13],html:`<div class="wp-node ${reached[i]?'reached':''}">${reached[i]?'⚑':n}<div class="wp-label">${s.n[currentLang]}</div></div>`});
-      L.marker(pts[i],{icon}).bindPopup(reached[i]?`<b>${s.n[currentLang]}</b><br>${s.f[currentLang]}`:i18n[currentLang].wpLocked).addTo(g);
-    }
-  });
+// ===== Map (no library): satellite tiles, drag, wheel/pinch zoom, waypoints =====
+const Z_MIN=7,Z_MAX=16,BOUNDS={s:41.6,w:26.4,n:44,e:29.6};
+const TILES='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/';
+const map={el:null,w:0,h:0,lat:42.85,lng:27.95,zoom:8,tiles:new Map(),markers:[],pts:[],last:0,popup:null,raf:0,anim:0,moved:false,sx:0,sy:0};
+const clampN=(v,a,b)=>Math.max(a,Math.min(b,v));
+ 
+// Web-Mercator maths
+const proj=(lat,lng,z)=>{const s=256*2**z,r=lat*Math.PI/180;return{x:(lng+180)/360*s,y:(1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*s}};
+const unproj=(x,y,z)=>{const s=256*2**z;return{lat:Math.atan(Math.sinh(Math.PI*(1-2*y/s)))*180/Math.PI,lng:x/s*360-180}};
+function toScreen(lat,lng){const p=proj(lat,lng,map.zoom),c=proj(map.lat,map.lng,map.zoom);return{x:p.x-c.x+map.w/2,y:p.y-c.y+map.h/2}}
+function toLatLng(x,y){const c=proj(map.lat,map.lng,map.zoom);return unproj(c.x+x-map.w/2,c.y+y-map.h/2,map.zoom)}
+function clampView(){map.zoom=clampN(map.zoom,Z_MIN,Z_MAX);map.lat=clampN(map.lat,BOUNDS.s,BOUNDS.n);map.lng=clampN(map.lng,BOUNDS.w,BOUNDS.e)}
+ 
+function requestRender(){if(!map.raf)map.raf=requestAnimationFrame(()=>{map.raf=0;renderMap()})}
+function panBy(dx,dy){const c=proj(map.lat,map.lng,map.zoom),n=unproj(c.x-dx,c.y-dy,map.zoom);map.lat=n.lat;map.lng=n.lng;clampView();requestRender()}
+function zoomAt(z,x,y){
+  z=clampN(z,Z_MIN,Z_MAX);const ll=toLatLng(x,y);map.zoom=z;
+  const p=proj(ll.lat,ll.lng,z),c=unproj(p.x-(x-map.w/2),p.y-(y-map.h/2),z);
+  map.lat=c.lat;map.lng=c.lng;clampView();requestRender();
 }
-function rebuildMap(){if(leafletMap)['city','sea'].forEach(buildLayer)}
-function fitRoute(){leafletMap.fitBounds(L.latLngBounds(ROUTES[currentMode].map(s=>[s.lat,s.lng])),{padding:[70,70],maxZoom:10,animate:true})}
-function showModeLayer(){leafletMap.removeLayer(layers[currentMode==='city'?'sea':'city']);layers[currentMode].addTo(leafletMap);fitRoute()}
+function animateTo(lat,lng,zoom,ms=500){
+  const id=++map.anim,a={lat:map.lat,lng:map.lng,zoom:map.zoom},t0=performance.now();
+  (function step(t){
+    if(id!==map.anim)return;
+    const p=1-Math.pow(1-Math.min(1,(t-t0)/ms),3);
+    map.lat=a.lat+(lat-a.lat)*p;map.lng=a.lng+(lng-a.lng)*p;map.zoom=a.zoom+(zoom-a.zoom)*p;
+    renderMap();if(p<1)requestAnimationFrame(step);
+  })(t0);
+}
+function routeView(){
+  const pts=ROUTES[currentMode],pad=70,w=map.w||600,h=map.h||500;let z=10,xs,ys;
+  for(;;z-=.5){
+    const ps=pts.map(s=>proj(s.lat,s.lng,z));xs=ps.map(p=>p.x);ys=ps.map(p=>p.y);
+    if(z<=Z_MIN||(Math.max(...xs)-Math.min(...xs)<=w-2*pad&&Math.max(...ys)-Math.min(...ys)<=h-2*pad))break;
+  }
+  const c=unproj((Math.min(...xs)+Math.max(...xs))/2,(Math.min(...ys)+Math.max(...ys))/2,z);
+  return{lat:c.lat,lng:c.lng,zoom:z};
+}
+function fitRoute(animate=true){
+  const v=routeView();
+  if(animate)animateTo(v.lat,v.lng,v.zoom,600);
+  else{map.lat=v.lat;map.lng=v.lng;map.zoom=v.zoom;clampView();renderMap()}
+}
+ 
+function renderMap(){
+  if(!map.el)return;
+  map.w=map.el.clientWidth;map.h=map.el.clientHeight;if(!map.w)return;
+  const tz=clampN(Math.round(map.zoom),Z_MIN,Z_MAX),ts=256*2**(map.zoom-tz),n=2**tz,c=proj(map.lat,map.lng,map.zoom);
+  const ox=c.x-map.w/2,oy=c.y-map.h/2,seen=new Set();
+  const x0=Math.max(0,Math.floor(ox/ts)),x1=Math.min(n-1,Math.floor((ox+map.w)/ts));
+  const y0=Math.max(0,Math.floor(oy/ts)),y1=Math.min(n-1,Math.floor((oy+map.h)/ts));
+  for(let ty=y0;ty<=y1;ty++)for(let tx=x0;tx<=x1;tx++){
+    const key=tz+'/'+tx+'/'+ty;seen.add(key);
+    let img=map.tiles.get(key);
+    if(!img){img=new Image();img.draggable=false;img.src=TILES+tz+'/'+ty+'/'+tx;map.tileEl.appendChild(img);map.tiles.set(key,img)}
+    img.style.setProperty('--x',(tx*ts-ox)+'px');img.style.setProperty('--y',(ty*ts-oy)+'px');img.style.setProperty('--s',(ts+1)+'px');
+  }
+  for(const[k,img]of map.tiles)if(!seen.has(k)){img.remove();map.tiles.delete(k)}
+ 
+  const P=map.pts.map(p=>{const s=toScreen(p.lat,p.lng);return s.x.toFixed(1)+','+s.y.toFixed(1)});
+  map.lineBase.setAttribute('points',P.join(' '));
+  map.lineDone.setAttribute('points',map.last>0?P.slice(0,map.last+1).join(' '):'');
+  map.markers.forEach(m=>{const s=toScreen(m.lat,m.lng);m.el.style.setProperty('--x',s.x+'px');m.el.style.setProperty('--y',s.y+'px')});
+  if(map.popup){const s=toScreen(map.popup.lat,map.popup.lng);map.popupEl.style.setProperty('--x',s.x+'px');map.popupEl.style.setProperty('--y',s.y+'px')}
+  map.el.classList.toggle('show-wp',map.zoom>=9.5);
+}
+ 
+function rebuildMap(){
+  if(!map.el)return;
+  const route=ROUTES[currentMode],reached=stopsReached(route);let n=0;
+  map.layer.innerHTML='';map.markers=[];map.pts=route;map.last=reached.lastIndexOf(true);closePopup();
+  route.forEach((s,i)=>{
+    const el=document.createElement('div');el.className='marker';
+    if(s.kind==='m'){
+      el.classList.add('mission');
+      el.innerHTML=`<div class="map-node ${s.color}">${done[s.id]?'<div class="done-badge">✔</div>':''}<div class="map-label">${i18n[currentLang][s.key]}</div></div>`;
+      el.addEventListener('click',()=>{if(!map.moved)startMiniGame(s.id)});
+    }else{
+      n++;el.classList.add('waypoint');
+      el.innerHTML=`<div class="wp-node ${reached[i]?'reached':''}">${reached[i]?'⚑':n}<div class="wp-label">${s.n[currentLang]}</div></div>`;
+      el.addEventListener('click',()=>{if(map.moved)return;sfx.pop();openPopup(s,reached[i])});
+    }
+    map.layer.appendChild(el);map.markers.push({el,lat:s.lat,lng:s.lng});
+  });
+  requestRender();
+}
+function openPopup(s,unlocked){
+  map.popup={lat:s.lat,lng:s.lng};
+  map.popupEl.innerHTML=unlocked?`<b>${s.n[currentLang]}</b><br>${s.f[currentLang]}`:i18n[currentLang].wpLocked;
+  map.popupEl.classList.remove('hidden');requestRender();
+}
+function closePopup(){if(!map.el)return;map.popup=null;map.popupEl.classList.add('hidden')}
 function markComplete(id){done[id]=true;try{localStorage.setItem('cs_hero_done_v1',JSON.stringify(done))}catch(e){}rebuildMap()}
  
-function initLeafletMap(){
-  if(leafletMap)return;
-  leafletMap=L.map('map-container',{zoomControl:false,attributionControl:false,minZoom:7,maxZoom:16,zoomSnap:.5,wheelPxPerZoomLevel:90,maxBounds:[[41.6,26.4],[44,29.6]],maxBoundsViscosity:.8}).setView([42.85,27.95],8);
-  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:16}).addTo(leafletMap);
-  L.control.zoom({position:'topright'}).addTo(leafletMap);
-  const Re=L.Control.extend({options:{position:'topright'},onAdd(){const c=L.DomUtil.create('div','leaflet-bar'),a=L.DomUtil.create('a','',c);a.innerHTML='⌖';a.href='#';a.title='Recenter';a.style.cssText='font-size:20px;text-align:center;cursor:pointer';L.DomEvent.on(a,'click',e=>{L.DomEvent.stop(e);sfx.pop();fitRoute()});return c}});
-  new Re().addTo(leafletMap);
-  leafletMap.on('zoomend',()=>document.getElementById('map-container').classList.toggle('show-wp',leafletMap.getZoom()>=9.5));
-  rebuildMap();showModeLayer();
-  setTimeout(()=>{leafletMap.invalidateSize();showModeLayer()},80);
+function initMap(){
+  if(map.el)return;
+  const el=map.el=document.getElementById('map-container');
+  map.tileEl=el.querySelector('.map-tiles');map.layer=el.querySelector('.map-markers');map.popupEl=el.querySelector('.map-popup');
+  [map.lineBase,map.lineDone]=el.querySelectorAll('polyline');
+ 
+  el.querySelector('.map-controls').addEventListener('click',e=>{
+    const b=e.target.closest('button');if(!b)return;sfx.pop();const d=+b.dataset.z;
+    if(d)animateTo(map.lat,map.lng,clampN(Math.round(map.zoom)+d,Z_MIN,Z_MAX));else fitRoute();
+  });
+ 
+  const ptrs=new Map();let prevD=0;
+  const rel=e=>{const r=el.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}};
+  el.addEventListener('pointerdown',e=>{
+    if(e.target.closest('.map-controls'))return;
+    map.anim++;ptrs.set(e.pointerId,rel(e));map.moved=false;map.sx=e.clientX;map.sy=e.clientY;prevD=0;el.classList.add('dragging');
+  });
+  window.addEventListener('pointermove',e=>{
+    const p=ptrs.get(e.pointerId);if(!p)return;const n=rel(e);
+    if(Math.hypot(e.clientX-map.sx,e.clientY-map.sy)>6)map.moved=true;
+    if(ptrs.size===1&&map.moved)panBy(n.x-p.x,n.y-p.y);
+    ptrs.set(e.pointerId,n);
+    if(ptrs.size===2){
+      const[a,b]=[...ptrs.values()],d=Math.hypot(a.x-b.x,a.y-b.y);
+      if(prevD)zoomAt(map.zoom+Math.log2(d/prevD),(a.x+b.x)/2,(a.y+b.y)/2);
+      prevD=d;map.moved=true;
+    }
+  });
+  const up=e=>{ptrs.delete(e.pointerId);prevD=0;if(!ptrs.size)el.classList.remove('dragging')};
+  window.addEventListener('pointerup',up);window.addEventListener('pointercancel',up);
+  el.addEventListener('wheel',e=>{e.preventDefault();map.anim++;const r=rel(e);zoomAt(map.zoom+clampN(-e.deltaY*.0025,-.5,.5),r.x,r.y)},{passive:false});
+  el.addEventListener('dblclick',e=>{if(e.target.closest('.marker,.map-controls,.map-popup'))return;const r=rel(e);map.anim++;zoomAt(map.zoom+1,r.x,r.y)});
+  el.addEventListener('click',e=>{if(!map.moved&&!e.target.closest('.marker,.map-popup,.map-controls'))closePopup()});
+  window.addEventListener('resize',requestRender);
+ 
+  map.w=el.clientWidth;map.h=el.clientHeight;
+  rebuildMap();fitRoute(false);
+  setTimeout(()=>{renderMap();fitRoute(false)},80);
 }
 function enterMap(){sfx.coin();document.getElementById('top-ui').classList.remove('hidden');showMap()}
 function setMode(mode){
@@ -149,9 +250,8 @@ function setMode(mode){
   document.getElementById('toggle-city').classList.toggle('active',city);
   document.getElementById('toggle-sea').classList.toggle('active',!city);
   const m=document.getElementById('map-container');
-  m.style.borderColor=city?'rgba(34,197,94,.6)':'rgba(56,189,248,.6)';
-  m.style.boxShadow=`0 20px 60px ${city?'rgba(34,197,94,.2)':'rgba(56,189,248,.2)'}`;
-  if(leafletMap)showModeLayer();
+  m.classList.toggle('is-city',city);m.classList.toggle('is-sea',!city);
+  if(map.el){rebuildMap();fitRoute()}
 }
 function showMap(){
   if(gameActive)sfx.pop();
@@ -159,7 +259,7 @@ function showMap(){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('screen-map').classList.add('active');
   ['timer-display','touch-controls'].forEach(i=>document.getElementById(i).classList.add('hidden'));
-  initLeafletMap();setTimeout(()=>leafletMap&&leafletMap.invalidateSize(),50);
+  initMap();setTimeout(renderMap,50);
   const b=document.getElementById('overlay-box');
   document.getElementById('game-overlay').classList.remove('active');
   b.classList.remove('show');
@@ -324,6 +424,19 @@ function initOil(){
     ctx.shadowBlur=0;updateVFX(ctx);animationId=requestAnimationFrame(loop);
   })();
 }
+ 
+// ===== Buttons are wired here, so the HTML contains no JavaScript =====
+document.addEventListener('click',e=>{
+  const a=e.target.closest('[data-action]');if(!a)return;
+  const[act,arg]=a.dataset.action.split(':');
+  if(act==='lang')setLang(arg);else if(act==='start')enterMap();else if(act==='mode')setMode(arg);else if(act==='back')showMap();
+});
+document.querySelectorAll('[data-key]').forEach(b=>{
+  const set=v=>e=>{e.preventDefault();keys[b.dataset.key]=v};
+  b.addEventListener('touchstart',set(true),{passive:false});
+  b.addEventListener('touchend',set(false),{passive:false});
+  b.addEventListener('touchcancel',set(false),{passive:false});
+});
  
 setLang('bg');setMode('city');
  
