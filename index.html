@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Градски Герой & Морски Герой / City & Sea Hero</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+ 
+<div id="lang-toggle" class="glass">
+  <div id="lang-bg" class="lang-btn" onclick="setLang('bg')">BG 🇧🇬</div>
+  <div id="lang-en" class="lang-btn" onclick="setLang('en')">EN 🇬🇧</div>
+</div>
+ 
+<div id="top-ui" class="hidden">
+  <div class="hud-chip glass">
+    <span><span data-i18n="score">Резултат:</span> <span id="score">0</span></span>
+    <span class="hs"><span data-i18n="highscore">Топ:</span> <span id="highscore">0</span></span>
+  </div>
+  <div id="timer-display" class="hud-chip timer glass hidden">⏱ <span id="time">60</span></div>
+</div>
+ 
+<div id="screen-menu" class="screen active">
+  <div class="menu-card glass">
+    <div class="menu-icon">🌍</div>
+    <h1 data-i18n="title">Градски & Морски Герой</h1>
+    <p class="menu-desc" data-i18n="desc"></p>
+    <button class="btn-start btn-juicy" onclick="enterMap()" data-i18n="startBtn"></button>
+  </div>
+</div>
+ 
+<div id="screen-map" class="screen">
+  <div class="mode-bar">
+    <button id="toggle-city" class="mode-btn mode-city btn-juicy active" onclick="setMode('city')" data-i18n="modeCity"></button>
+    <button id="toggle-sea" class="mode-btn mode-sea btn-juicy" onclick="setMode('sea')" data-i18n="modeSea"></button>
+  </div>
+  <div id="map-container"></div>
+</div>
+ 
+<div id="screen-game" class="screen">
+  <div class="game-header">
+    <div class="title-card glass">
+      <h2 id="game-title">Mission</h2>
+      <p id="game-subtitle"></p>
+    </div>
+    <button class="btn-cancel btn-juicy glass" onclick="showMap()" data-i18n="backBtn"></button>
+  </div>
+  <div class="canvas-wrap">
+    <canvas id="game-canvas" width="900" height="600"></canvas>
+    <div id="touch-controls" class="hidden">
+      <button class="dpad" ontouchstart="keys.arrowup=true" ontouchend="keys.arrowup=false">▲</button>
+      <div class="row">
+        <button class="dpad" ontouchstart="keys.arrowleft=true" ontouchend="keys.arrowleft=false">◀</button>
+        <button class="dpad" ontouchstart="keys.arrowright=true" ontouchend="keys.arrowright=false">▶</button>
+      </div>
+      <button class="dpad" ontouchstart="keys.arrowdown=true" ontouchend="keys.arrowdown=false">▼</button>
+    </div>
+  </div>
+</div>
+ 
+<div id="game-overlay" class="screen">
+  <div id="overlay-box" class="overlay-box glass">
+    <div id="overlay-icon">✨</div>
+    <h3 id="overlay-msg"></h3>
+    <div class="fact-box">
+      <h4>💡 <span data-i18n="didYouKnow"></span></h4>
+      <p id="overlay-fact"></p>
+    </div>
+    <button class="btn-continue btn-juicy" onclick="showMap()" data-i18n="toMap"></button>
+  </div>
+</div>
+ 
+<script src="script.js"></script>
+</body>
+</html>
+ 
